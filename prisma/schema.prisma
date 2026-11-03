@@ -1,0 +1,288 @@
+// Duo Fraguima — Painel de Gestão de Clientes
+// Modelo de dados conforme a especificação (Estágio 1), rev. 401.
+// Regra de ouro: TODA consulta de dado de cliente é filtrada por empresaId
+// vindo da sessão autenticada — nunca por um valor enviado pelo próprio cliente.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Equipe interna da Duo Fraguima (não são clientes)
+// ---------------------------------------------------------------------------
+
+enum PapelInterno {
+  PROPRIETARIO
+  COLABORADOR
+}
+
+enum StatusConta {
+  ATIVO
+  PENDENTE
+  BLOQUEADO
+  REMOVIDO
+}
+
+model UsuarioInterno {
+  id            String       @id @default(cuid())
+  nome          String
+  email         String       @unique
+  senhaHash     String?
+  papel         PapelInterno @default(COLABORADOR)
+  status        StatusConta  @default(PENDENTE)
+  googleId      String?      @unique
+  conviteToken  String?      @unique
+  conviteExpira DateTime?
+  criadoEm      DateTime     @default(now())
+  atualizadoEm  DateTime     @updatedAt
+
+  empresasCriadas Empresa[] @relation("EmpresaCriadaPor")
+}
+
+// ---------------------------------------------------------------------------
+// Empresa (tenant) — cada cliente da Duo Fraguima
+// ---------------------------------------------------------------------------
+
+model Empresa {
+  id            String      @id @default(cuid())
+  codigo        String      @unique // ex.: CLI-0001, exibido no Administrativo
+  nome          String
+  cnpj          String?
+  responsavel   String
+  email         String
+  telefone      String?
+  status        StatusConta @default(PENDENTE) // ativo | pendente (1º acesso) | bloqueado
+  criadoPor     UsuarioInterno? @relation("EmpresaCriadaPor", fields: [criadoPorId], references: [id])
+  criadoPorId   String?
+  criadoEm      DateTime    @default(now())
+  atualizadoEm  DateTime    @updatedAt
+
+  usuarios          Usuario[]
+  parametros        ParametrosEmpresa?
+  funcionarios      Funcionario[]
+  veiculos          Veiculo[]
+  terceirizados     Terceirizado[]
+  custosFixos       CustoFixo[]
+  produtosServicos  ProdutoServico[]
+  vendas            Venda[]
+  metasFrente       MetaFrente[]
+  lancamentosCaixa  LancamentoCaixa[]
+  planoNegocio      PlanoNegocio?
+  aceiteTermos      AceiteTermos?
+}
+
+// Login de acesso do lado do cliente (1 por empresa no MVP; múltiplos a partir da fase 2)
+model Usuario {
+  id            String      @id @default(cuid())
+  empresa       Empresa     @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  empresaId     String
+  nome          String
+  email         String      @unique
+  senhaHash     String?
+  googleId      String?     @unique
+  conviteToken  String?     @unique
+  conviteExpira DateTime?
+  criadoEm      DateTime    @default(now())
+  atualizadoEm  DateTime    @updatedAt
+
+  @@index([empresaId])
+}
+
+// Registro do aceite do termo de uso no 1º login do cliente (cobertura jurídica)
+model AceiteTermos {
+  id        String   @id @default(cuid())
+  empresa   Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  empresaId String   @unique
+  nome      String
+  ip        String
+  aceitoEm  DateTime @default(now())
+}
+
+// ---------------------------------------------------------------------------
+// Parâmetros da empresa (configurado uma vez, usado em Precificação)
+// ---------------------------------------------------------------------------
+
+model ParametrosEmpresa {
+  id                  String   @id @default(cuid())
+  empresa             Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  empresaId           String   @unique
+  regimeTributario    String   @default("Simples Nacional")
+  horasUteisMes       Decimal  @default(220) @db.Decimal(10, 2)
+  percImpostos        Decimal  @default(6) @db.Decimal(6, 2)
+  percLucroDesejado   Decimal  @default(15) @db.Decimal(6, 2)
+  percRisco           Decimal  @default(3) @db.Decimal(6, 2)
+  percTaxaCartao      Decimal  @default(3.5) @db.Decimal(6, 2)
+  percFatorInstalacao Decimal  @default(0) @db.Decimal(6, 2)
+  comissaoGlobal      Decimal  @default(0) @db.Decimal(6, 2)
+  comissaoIndicacao   Decimal  @default(1) @db.Decimal(6, 2)
+  comissaoMC          Decimal  @default(0) @db.Decimal(6, 2)
+  custoComercialMes   Decimal  @default(0) @db.Decimal(12, 2)
+  atualizadoEm        DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Cadastros — Funcionários, Veículos, Terceirizados
+// ---------------------------------------------------------------------------
+
+model Funcionario {
+  id             String   @id @default(cuid())
+  empresa        Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  empresaId      String
+  nome           String
+  funcao         String
+  salarioBase    Decimal  @db.Decimal(12, 2)
+  percEncargos   Decimal  @default(0) @db.Decimal(6, 2)
+  valeAlimentacao Decimal @default(0) @db.Decimal(12, 2)
+  valeTransporte Decimal  @default(0) @db.Decimal(12, 2)
+  planoSaude     Decimal  @default(0) @db.Decimal(12, 2)
+  bonificacao    Decimal  @default(0) @db.Decimal(12, 2)
+  ativo          Boolean  @default(true)
+  criadoEm       DateTime @default(now())
+
+  @@index([empresaId])
+}
+
+model Veiculo {
+  id            String   @id @default(cuid())
+  empresa       Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  empresaId     String
+  nome          String
+  valorVeiculo  Decimal  @default(0) @db.Decimal(12, 2)
+  seguroMensal  Decimal  @default(0) @db.Decimal(12, 2)
+  ipvaMensal    Decimal  @default(0) @db.Decimal(12, 2)
+  manutencao    Decimal  @default(0) @db.Decimal(12, 2)
+  ativo         Boolean  @default(true)
+  criadoEm      DateTime @default(now())
+
+  @@index([empresaId])
+}
+
+model Terceirizado {
+  id            String   @id @default(cuid())
+  empresa       Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  empresaId     String
+  nome          String
+  valorDiaria   Decimal  @db.Decimal(12, 2)
+  ativo         Boolean  @default(true)
+  criadoEm      DateTime @default(now())
+
+  @@index([empresaId])
+}
+
+// ---------------------------------------------------------------------------
+// Custos Fixos — despesas gerais (fora de Funcionários/Veículos, que já têm valor próprio)
+// ---------------------------------------------------------------------------
+
+enum TagCustoFixo {
+  GERAL
+  SO_SERVICOS
+}
+
+model CustoFixo {
+  id        String       @id @default(cuid())
+  empresa   Empresa      @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  empresaId String
+  nome      String
+  valor     Decimal      @db.Decimal(12, 2)
+  tag       TagCustoFixo @default(GERAL)
+  ativo     Boolean      @default(true)
+  criadoEm  DateTime     @default(now())
+
+  @@index([empresaId])
+}
+
+// ---------------------------------------------------------------------------
+// Produtos/Serviços, Vendas, Metas, Fluxo de Caixa
+// ---------------------------------------------------------------------------
+
+enum Frente {
+  VENDA_USINAS
+  SERVICOS
+  MRR
+}
+
+model ProdutoServico {
+  id            String   @id @default(cuid())
+  empresa       Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  empresaId     String
+  nome          String
+  frente        Frente
+  custoVariavel Decimal  @default(0) @db.Decimal(12, 2)
+  ativo         Boolean  @default(true)
+
+  vendas Venda[]
+
+  @@index([empresaId])
+}
+
+model Venda {
+  id              String          @id @default(cuid())
+  empresa         Empresa         @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  empresaId       String
+  data            DateTime
+  frente          Frente
+  produtoServico  ProdutoServico? @relation(fields: [produtoServicoId], references: [id])
+  produtoServicoId String?
+  tipoServico     String?
+  precoCobrado    Decimal         @db.Decimal(12, 2)
+  custoVariavel   Decimal         @default(0) @db.Decimal(12, 2)
+  mesFechado      Boolean         @default(false)
+  criadoEm        DateTime        @default(now())
+  atualizadoEm    DateTime        @updatedAt
+
+  edicoes VendaEdicaoLog[]
+
+  @@index([empresaId])
+  @@index([empresaId, data])
+}
+
+// Log de auditoria — toda edição de uma venda, enquanto o mês está aberto, pede um motivo
+model VendaEdicaoLog {
+  id         String   @id @default(cuid())
+  venda      Venda    @relation(fields: [vendaId], references: [id], onDelete: Cascade)
+  vendaId    String
+  motivo     String
+  camposAntes Json
+  camposDepois Json
+  editadoEm  DateTime @default(now())
+}
+
+model MetaFrente {
+  id            String   @id @default(cuid())
+  empresa       Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  empresaId     String
+  frente        Frente
+  mesReferencia String   // formato "YYYY-MM"
+  metaValor     Decimal  @db.Decimal(12, 2)
+  ticketMedio   Decimal  @db.Decimal(12, 2)
+  percConversao Decimal  @db.Decimal(6, 2)
+
+  @@unique([empresaId, frente, mesReferencia])
+}
+
+model LancamentoCaixa {
+  id                String   @id @default(cuid())
+  empresa           Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  empresaId         String
+  mesReferencia     String   // "YYYY-MM"
+  receitaPrevista   Decimal  @default(0) @db.Decimal(12, 2)
+  receitaRealizada  Decimal  @default(0) @db.Decimal(12, 2)
+  custoVariavel     Decimal  @default(0) @db.Decimal(12, 2)
+  custoFixo         Decimal  @default(0) @db.Decimal(12, 2)
+  impostos          Decimal  @default(0) @db.Decimal(12, 2)
+
+  @@unique([empresaId, mesReferencia])
+}
+
+model PlanoNegocio {
+  id        String   @id @default(cuid())
+  empresa   Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  empresaId String   @unique
+  conteudo  Json?
+  atualizadoEm DateTime @updatedAt
+}

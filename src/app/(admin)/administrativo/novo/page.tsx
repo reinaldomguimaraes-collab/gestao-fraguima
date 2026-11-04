@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { criarClienteAction } from "./actions";
+import { TelefoneInput } from "@/components/TelefoneInput";
 
 const ERROS: Record<string, string> = {
   obrigatorio: "Preencha nome da empresa, responsável e e-mail."
@@ -35,7 +36,7 @@ export default function NovoClientePage({ searchParams }: { searchParams: { erro
           </div>
           <div>
             <label className="label">Telefone</label>
-            <input className="input" name="telefone" placeholder="(00) 00000-0000" />
+            <TelefoneInput name="telefone" />
           </div>
         </div>
         <p className="caption">

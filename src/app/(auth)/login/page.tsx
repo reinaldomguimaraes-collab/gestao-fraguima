@@ -1,6 +1,7 @@
 import { Logo } from "@/components/Logo";
 import { loginAction, loginGoogleAction } from "./actions";
 import { GoogleIcon } from "@/components/GoogleIcon";
+import { SubmitButton } from "@/components/SubmitButton";
 
 const ERROS: Record<string, string> = {
   credenciais: "E-mail ou senha incorretos.",
@@ -44,9 +45,9 @@ export default function LoginPage({ searchParams }: { searchParams: { erro?: str
             </label>
             <input className="input" id="password" name="password" type="password" required placeholder="••••••••" />
           </div>
-          <button className="btn btn-primary justify-center" type="submit">
+          <SubmitButton pendingText="Entrando..." className="btn btn-primary justify-center">
             Entrar
-          </button>
+          </SubmitButton>
         </form>
 
         <div className="my-4 flex items-center gap-3">
@@ -56,9 +57,9 @@ export default function LoginPage({ searchParams }: { searchParams: { erro?: str
         </div>
 
         <form action={loginGoogleAction}>
-          <button className="btn btn-ghost w-full justify-center" type="submit">
+          <SubmitButton pendingText="Conectando..." className="btn btn-ghost w-full justify-center">
             <GoogleIcon /> Entrar com Google
-          </button>
+          </SubmitButton>
         </form>
 
         <p className="caption mt-5 text-center">Ainda não tem acesso? Fale com seu consultor Duo Fraguima.</p>

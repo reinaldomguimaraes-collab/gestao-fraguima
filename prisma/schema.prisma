@@ -144,6 +144,8 @@ model Funcionario {
   ativo          Boolean  @default(true)
   criadoEm       DateTime @default(now())
 
+  maoDeObraServicos ServicoMaoDeObra[]
+
   @@index([empresaId])
 }
 
@@ -158,6 +160,8 @@ model Veiculo {
   manutencao    Decimal  @default(0) @db.Decimal(12, 2)
   ativo         Boolean  @default(true)
   criadoEm      DateTime @default(now())
+
+  maoDeObraServicos ServicoMaoDeObra[]
 
   @@index([empresaId])
 }
@@ -177,6 +181,8 @@ model Terceirizado {
   valorPlaca    Decimal?                 @db.Decimal(12, 2) // usado quando tipoCobranca = PLACA (valor por placa instalada)
   ativo         Boolean                  @default(true)
   criadoEm      DateTime                 @default(now())
+
+  maoDeObraServicos ServicoMaoDeObra[]
 
   @@index([empresaId])
 }
@@ -222,9 +228,55 @@ model ProdutoServico {
   custoVariavel Decimal  @default(0) @db.Decimal(12, 2)
   ativo         Boolean  @default(true)
 
-  vendas Venda[]
+  vendas    Venda[]
+  maoDeObra ServicoMaoDeObra[]
+  insumos   ServicoInsumo[]
 
   @@index([empresaId])
+}
+
+// ---------------------------------------------------------------------------
+// Construtor de custo de um Serviço (Precificação > Serviços): mão de obra
+// puxada dos Cadastros (Funcionário/Veículo por hora, Terceirizado por
+// diária ou placa) ou avulsa, mais insumos — soma vira ProdutoServico.custoVariavel,
+// que alimenta a calculadora de percentuais já existente (sem duplicá-la).
+// ---------------------------------------------------------------------------
+
+enum OrigemMaoDeObra {
+  FUNCIONARIO
+  VEICULO
+  TERCEIRIZADO
+  AVULSO
+}
+
+model ServicoMaoDeObra {
+  id               String          @id @default(cuid())
+  produtoServico   ProdutoServico  @relation(fields: [produtoServicoId], references: [id], onDelete: Cascade)
+  produtoServicoId String
+  origem           OrigemMaoDeObra
+  funcionario      Funcionario?    @relation(fields: [funcionarioId], references: [id])
+  funcionarioId    String?
+  veiculo          Veiculo?        @relation(fields: [veiculoId], references: [id])
+  veiculoId        String?
+  terceirizado     Terceirizado?   @relation(fields: [terceirizadoId], references: [id])
+  terceirizadoId   String?
+  descricao        String? // usado só quando origem = AVULSO
+  valorUnitario    Decimal?        @db.Decimal(12, 2) // usado só quando origem = AVULSO
+  quantidade       Decimal         @default(1) @db.Decimal(10, 2) // horas (Funcionário/Veículo), diárias ou placas (Terceirizado), ou unidades (Avulso)
+  criadoEm         DateTime        @default(now())
+
+  @@index([produtoServicoId])
+}
+
+model ServicoInsumo {
+  id               String         @id @default(cuid())
+  produtoServico   ProdutoServico @relation(fields: [produtoServicoId], references: [id], onDelete: Cascade)
+  produtoServicoId String
+  descricao        String
+  valor            Decimal        @db.Decimal(12, 2)
+  criadoEm         DateTime       @default(now())
+
+  @@index([produtoServicoId])
 }
 
 model Venda {

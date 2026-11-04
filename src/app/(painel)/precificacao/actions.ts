@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { Prisma, OrigemMaoDeObra } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireCliente } from "@/lib/session";
 import { recalcularCustoServico } from "@/lib/calc/custoServico";
@@ -47,9 +48,12 @@ export async function adicionarMaoDeObraAction(formData: FormData) {
 
   const origemRef = String(formData.get("origemRef") || ""); // "FUNCIONARIO:<id>" | "VEICULO:<id>" | "TERCEIRIZADO:<id>" | "AVULSO"
   const quantidade = Number(formData.get("quantidade") || 1) || 1;
-  const [origem, refId] = origemRef.split(":");
+  const [origemBruto, refId] = origemRef.split(":");
 
-  const data: Record<string, unknown> = { produtoServicoId, origem, quantidade };
+  if (!["FUNCIONARIO", "VEICULO", "TERCEIRIZADO", "AVULSO"].includes(origemBruto)) return;
+  const origem = origemBruto as OrigemMaoDeObra;
+
+  const data: Prisma.ServicoMaoDeObraUncheckedCreateInput = { produtoServicoId, origem, quantidade };
 
   if (origem === "FUNCIONARIO") {
     const f = await prisma.funcionario.findFirst({ where: { id: refId, empresaId } });
@@ -63,13 +67,11 @@ export async function adicionarMaoDeObraAction(formData: FormData) {
     const t = await prisma.terceirizado.findFirst({ where: { id: refId, empresaId } });
     if (!t) throw new Error("Terceirizado não encontrado.");
     data.terceirizadoId = refId;
-  } else if (origem === "AVULSO") {
+  } else {
     const descricao = String(formData.get("descricao") || "").trim();
     if (!descricao) return;
     data.descricao = descricao;
     data.valorUnitario = Number(formData.get("valorUnitario") || 0);
-  } else {
-    return;
   }
 
   await prisma.servicoMaoDeObra.create({ data });

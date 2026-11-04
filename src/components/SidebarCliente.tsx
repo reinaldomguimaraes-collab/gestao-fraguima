@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Logo } from "./Logo";
 import { signOutAction } from "@/lib/auth-actions";
 
@@ -16,16 +19,16 @@ const ITEMS = [
 ];
 
 export function SidebarCliente({
-  active,
   empresaNome,
   usuarioNome
 }: {
-  active: string;
   empresaNome: string;
   usuarioNome: string;
 }) {
+  const pathname = usePathname();
+
   return (
-    <aside className="flex h-full w-64 flex-col border-r border-border bg-white p-4">
+    <aside className="flex w-64 flex-col border-r border-border bg-white p-4">
       <div className="mb-6 flex items-center gap-2 px-2">
         <Logo />
         <div>
@@ -40,7 +43,7 @@ export function SidebarCliente({
           <Link
             key={item.href}
             href={item.href}
-            className={`nav-item ${active.startsWith(item.href) ? "nav-item-active" : ""}`}
+            className={`nav-item ${pathname.startsWith(item.href) ? "nav-item-active" : ""}`}
           >
             {item.label}
           </Link>

@@ -22,7 +22,7 @@ export default async function PainelLayout({ children }: { children: React.React
 
   return (
     <div className="flex min-h-screen bg-surface-100">
-      <SidebarCliente active={pathname} empresaNome={empresa.nome} usuarioNome={nome} />
+      <SidebarCliente empresaNome={empresa.nome} usuarioNome={nome} />
       <main className="flex-1 p-8">{children}</main>
     </div>
   );

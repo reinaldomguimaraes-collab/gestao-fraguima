@@ -7,9 +7,10 @@ import {
   desativarFuncionarioAction,
   criarVeiculoAction,
   desativarVeiculoAction,
-  criarTerceirizadoAction,
   desativarTerceirizadoAction
 } from "./actions";
+import { NovoTerceirizadoForm } from "./NovoTerceirizadoForm";
+import { CalculadoraPlaca } from "./CalculadoraPlaca";
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -166,7 +167,8 @@ export default async function CadastrosPage({ searchParams }: { searchParams: { 
               <thead className="bg-surface-100 text-left text-ink-muted">
                 <tr>
                   <th className="px-4 py-3 font-medium">Nome</th>
-                  <th className="px-4 py-3 font-medium">Valor por diária</th>
+                  <th className="px-4 py-3 font-medium">Tipo de cobrança</th>
+                  <th className="px-4 py-3 font-medium">Valor</th>
                   <th className="px-4 py-3" />
                 </tr>
               </thead>
@@ -174,7 +176,20 @@ export default async function CadastrosPage({ searchParams }: { searchParams: { 
                 {terceirizados.map((t) => (
                   <tr key={t.id} className="border-t border-border">
                     <td className="px-4 py-3 font-semibold text-ink">{t.nome}</td>
-                    <td className="px-4 py-3">{fmt(Number(t.valorDiaria))}</td>
+                    <td className="px-4 py-3">
+                      {t.tipoCobranca === "PLACA" ? (
+                        <span className="chip" style={{ background: "rgba(14,74,87,0.1)", color: "#0E4A57" }}>
+                          Por placa instalada
+                        </span>
+                      ) : (
+                        <span className="chip border border-border bg-surface-100 text-ink-muted">Por diária</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      {t.tipoCobranca === "PLACA"
+                        ? `${fmt(Number(t.valorPlaca))} / placa`
+                        : `${fmt(Number(t.valorDiaria))} / diária`}
+                    </td>
                     <td className="px-4 py-3 text-right">
                       <form action={desativarTerceirizadoAction}>
                         <input type="hidden" name="id" value={t.id} />
@@ -185,7 +200,7 @@ export default async function CadastrosPage({ searchParams }: { searchParams: { 
                 ))}
                 {terceirizados.length === 0 && (
                   <tr>
-                    <td colSpan={3} className="px-4 py-6 text-center text-ink-muted">
+                    <td colSpan={4} className="px-4 py-6 text-center text-ink-muted">
                       Nenhum terceirizado cadastrado.
                     </td>
                   </tr>
@@ -194,18 +209,16 @@ export default async function CadastrosPage({ searchParams }: { searchParams: { 
             </table>
           </div>
 
-          <form action={criarTerceirizadoAction} className="card mt-5 grid grid-cols-2 gap-4">
-            <Campo label="Nome" name="nome" required />
-            <Campo label="Valor por diária (R$)" name="valorDiaria" type="number" />
-            <div className="col-span-2 flex justify-end">
-              <button className="btn btn-primary" type="submit">
-                + Adicionar terceirizado
-              </button>
-            </div>
-          </form>
+          <NovoTerceirizadoForm />
           <p className="caption mt-2">
             Mão de obra terceirizada é puxada manualmente em vendas/serviços específicos — não entra no Custo Fixo.
           </p>
+
+          <CalculadoraPlaca
+            terceirizados={terceirizados
+              .filter((t) => t.tipoCobranca === "PLACA" && t.valorPlaca !== null)
+              .map((t) => ({ id: t.id, nome: t.nome, valorPlaca: Number(t.valorPlaca) }))}
+          />
         </section>
       )}
     </div>

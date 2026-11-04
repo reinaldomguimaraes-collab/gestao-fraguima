@@ -62,11 +62,15 @@ export async function desativarVeiculoAction(formData: FormData) {
 
 export async function criarTerceirizadoAction(formData: FormData) {
   const { empresaId } = await requireCliente();
+  const tipoCobranca = formData.get("tipoCobranca") === "PLACA" ? "PLACA" : "DIARIA";
+
   await prisma.terceirizado.create({
     data: {
       empresaId,
       nome: String(formData.get("nome") || ""),
-      valorDiaria: num(formData, "valorDiaria")
+      tipoCobranca,
+      valorDiaria: tipoCobranca === "DIARIA" ? num(formData, "valorDiaria") : null,
+      valorPlaca: tipoCobranca === "PLACA" ? num(formData, "valorPlaca") : null
     }
   });
   revalidatePath("/cadastros");

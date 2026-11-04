@@ -162,14 +162,21 @@ model Veiculo {
   @@index([empresaId])
 }
 
+enum TipoCobrancaTerceirizado {
+  DIARIA
+  PLACA
+}
+
 model Terceirizado {
-  id            String   @id @default(cuid())
-  empresa       Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  id            String                   @id @default(cuid())
+  empresa       Empresa                  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   empresaId     String
   nome          String
-  valorDiaria   Decimal  @db.Decimal(12, 2)
-  ativo         Boolean  @default(true)
-  criadoEm      DateTime @default(now())
+  tipoCobranca  TipoCobrancaTerceirizado @default(DIARIA)
+  valorDiaria   Decimal?                 @db.Decimal(12, 2) // usado quando tipoCobranca = DIARIA
+  valorPlaca    Decimal?                 @db.Decimal(12, 2) // usado quando tipoCobranca = PLACA (valor por placa instalada)
+  ativo         Boolean                  @default(true)
+  criadoEm      DateTime                 @default(now())
 
   @@index([empresaId])
 }

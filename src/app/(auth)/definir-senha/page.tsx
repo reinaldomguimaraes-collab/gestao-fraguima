@@ -1,7 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import { Logo } from "@/components/Logo";
 import { GoogleIcon } from "@/components/GoogleIcon";
-import { definirSenhaAction, definirSenhaGoogleAction } from "./actions";
+import { definirSenhaGoogleAction } from "./actions";
+import { DefinirSenhaForm } from "./DefinirSenhaForm";
+import { SubmitButton } from "@/components/SubmitButton";
 
 const ERROS: Record<string, string> = {
   curta: "A senha precisa ter pelo menos 8 caracteres.",
@@ -48,24 +50,7 @@ export default async function DefinirSenhaPage({
         )}
         {erro && <div className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-negative">{erro}</div>}
 
-        <form action={definirSenhaAction} className="flex flex-col gap-4">
-          <input type="hidden" name="token" value={token} />
-          <div>
-            <label className="label" htmlFor="senha">
-              Senha
-            </label>
-            <input className="input" id="senha" name="senha" type="password" required minLength={8} placeholder="••••••••" />
-          </div>
-          <div>
-            <label className="label" htmlFor="confirmar">
-              Confirmar senha
-            </label>
-            <input className="input" id="confirmar" name="confirmar" type="password" required minLength={8} placeholder="••••••••" />
-          </div>
-          <button className="btn btn-primary justify-center" type="submit" disabled={!token}>
-            Criar conta
-          </button>
-        </form>
+        <DefinirSenhaForm token={token} />
 
         <div className="my-4 flex items-center gap-3">
           <div className="h-px flex-1 bg-border" />
@@ -74,9 +59,9 @@ export default async function DefinirSenhaPage({
         </div>
 
         <form action={definirSenhaGoogleAction}>
-          <button className="btn btn-ghost w-full justify-center" type="submit">
+          <SubmitButton pendingText="Conectando..." className="btn btn-ghost w-full justify-center">
             <GoogleIcon /> Entrar com Google
-          </button>
+          </SubmitButton>
         </form>
 
         <p className="caption mt-5 text-center leading-relaxed">

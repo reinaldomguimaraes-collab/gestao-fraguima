@@ -1,25 +1,27 @@
 "use server";
 
 import { AuthError } from "next-auth";
-import { redirect } from "next/navigation";
 import { signIn } from "@/auth";
 
-export async function loginAction(formData: FormData) {
+export type LoginState = { ok: true } | { ok: false; erro: string } | null;
+
+export async function loginAction(_prevState: LoginState, formData: FormData): Promise<LoginState> {
   try {
     await signIn("credentials", {
       email: formData.get("email"),
       password: formData.get("password"),
-      redirectTo: "/"
+      redirect: false
     });
   } catch (error) {
     if (error instanceof AuthError) {
-      if (error.type === "CredentialsSignin") redirect("/login?erro=credenciais");
-      if (error.message?.includes("ACESSO_BLOQUEADO")) redirect("/login?erro=bloqueado");
-      if (error.message?.includes("ACESSO_REMOVIDO")) redirect("/login?erro=removido");
-      redirect("/login?erro=geral");
+      if (error.message?.includes("ACESSO_BLOQUEADO")) return { ok: false, erro: "bloqueado" };
+      if (error.message?.includes("ACESSO_REMOVIDO")) return { ok: false, erro: "removido" };
+      if (error.type === "CredentialsSignin") return { ok: false, erro: "credenciais" };
+      return { ok: false, erro: "geral" };
     }
     throw error;
   }
+  return { ok: true };
 }
 
 export async function loginGoogleAction() {

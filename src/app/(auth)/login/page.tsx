@@ -1,7 +1,8 @@
 import { Logo } from "@/components/Logo";
-import { loginAction, loginGoogleAction } from "./actions";
+import { loginGoogleAction } from "./actions";
 import { GoogleIcon } from "@/components/GoogleIcon";
 import { SubmitButton } from "@/components/SubmitButton";
+import { LoginForm } from "./LoginForm";
 
 const ERROS: Record<string, string> = {
   credenciais: "E-mail ou senha incorretos.",
@@ -32,23 +33,7 @@ export default function LoginPage({ searchParams }: { searchParams: { erro?: str
           <div className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-negative">{erro}</div>
         )}
 
-        <form action={loginAction} className="flex flex-col gap-4">
-          <div>
-            <label className="label" htmlFor="email">
-              E-mail
-            </label>
-            <input className="input" id="email" name="email" type="email" required placeholder="voce@suaempresa.com.br" />
-          </div>
-          <div>
-            <label className="label" htmlFor="password">
-              Senha
-            </label>
-            <input className="input" id="password" name="password" type="password" required placeholder="••••••••" />
-          </div>
-          <SubmitButton pendingText="Entrando..." className="btn btn-primary justify-center">
-            Entrar
-          </SubmitButton>
-        </form>
+        <LoginForm />
 
         <div className="my-4 flex items-center gap-3">
           <div className="h-px flex-1 bg-border" />

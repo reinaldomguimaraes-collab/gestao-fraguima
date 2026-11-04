@@ -5,7 +5,12 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { signIn } from "@/auth";
 
-export async function definirSenhaAction(formData: FormData) {
+export type DefinirSenhaState = { ok: true; destino: string } | { ok: false; erro: string } | null;
+
+export async function definirSenhaAction(
+  _prevState: DefinirSenhaState,
+  formData: FormData
+): Promise<DefinirSenhaState> {
   const token = String(formData.get("token") || "");
   const senha = String(formData.get("senha") || "");
   const confirmar = String(formData.get("confirmar") || "");
@@ -31,8 +36,8 @@ export async function definirSenhaAction(formData: FormData) {
         data: { status: usuario.empresa.status === "PENDENTE" ? "ATIVO" : usuario.empresa.status }
       })
     ]);
-    await signIn("credentials", { email: usuario.email, password: senha, redirectTo: "/aceite-termos" });
-    return;
+    await signIn("credentials", { email: usuario.email, password: senha, redirect: false });
+    return { ok: true, destino: "/aceite-termos" };
   }
 
   const interno = await prisma.usuarioInterno.findUnique({ where: { conviteToken: token } });
@@ -49,8 +54,8 @@ export async function definirSenhaAction(formData: FormData) {
         status: interno.status === "PENDENTE" ? "ATIVO" : interno.status
       }
     });
-    await signIn("credentials", { email: interno.email, password: senha, redirectTo: "/administrativo" });
-    return;
+    await signIn("credentials", { email: interno.email, password: senha, redirect: false });
+    return { ok: true, destino: "/administrativo" };
   }
 
   redirect("/login?erro=geral");

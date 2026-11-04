@@ -1,3 +1,7 @@
+"use client";
+
+import { useState } from "react";
+
 const PASSOS = [
   { titulo: "Dashboard", texto: "Aqui você vê o resumo financeiro do mês: faturamento, custo fixo, resultado e o progresso das suas metas." },
   { titulo: "Parâmetros da Empresa", texto: "Configure uma vez: regime tributário, percentuais padrão e horas úteis/mês. Esses valores viram o padrão da Precificação." },
@@ -10,27 +14,60 @@ const PASSOS = [
 ];
 
 export default function OnboardingPage() {
-  return (
-    <div className="max-w-2xl">
-      <h1 className="font-display mb-1 text-xl font-bold text-ink">Bem-vindo ao Duo Fraguima</h1>
-      <p className="caption mb-6">Um resumo rápido de cada parte do painel — você pode rever isso quando quiser em Configurações.</p>
+  const [passo, setPasso] = useState(0);
+  const total = PASSOS.length;
+  const atual = PASSOS[passo];
+  const ultimo = passo === total - 1;
 
-      <div className="flex flex-col gap-3">
-        {PASSOS.map((p, i) => (
-          <div key={p.titulo} className="card flex gap-4">
-            <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-accent text-sm font-semibold text-white">
-              {i + 1}
-            </div>
-            <div>
-              <div className="text-sm font-semibold text-ink">{p.titulo}</div>
-              <p className="caption mt-0.5">{p.texto}</p>
-            </div>
+  return (
+    <div className="max-w-xl">
+      <h1 className="font-display mb-1 text-xl font-bold text-ink">Bem-vindo ao Duo Fraguima</h1>
+      <p className="caption mb-6">
+        Um guia rápido pelas partes do painel — você pode rever isso quando quiser em Configurações.
+      </p>
+
+      <div className="card">
+        <div className="mb-5 flex items-center gap-1.5">
+          {PASSOS.map((_, i) => (
+            <div key={i} className={`h-1.5 flex-1 rounded-full ${i <= passo ? "bg-accent" : "bg-border"}`} />
+          ))}
+        </div>
+
+        <div className="flex gap-4">
+          <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-accent text-base font-semibold text-white">
+            {passo + 1}
           </div>
-        ))}
+          <div>
+            <div className="text-base font-semibold text-ink">{atual.titulo}</div>
+            <p className="caption mt-1">{atual.texto}</p>
+          </div>
+        </div>
+
+        <div className="mt-6 flex items-center justify-between border-t border-border pt-4">
+          <span className="caption">
+            {passo + 1} de {total}
+          </span>
+          <div className="flex gap-2">
+            {passo > 0 && (
+              <button type="button" className="btn btn-ghost" onClick={() => setPasso((p) => p - 1)}>
+                Anterior
+              </button>
+            )}
+            {!ultimo ? (
+              <button type="button" className="btn btn-primary" onClick={() => setPasso((p) => p + 1)}>
+                Próximo
+              </button>
+            ) : (
+              <a href="/dashboard" className="btn btn-primary">
+                Ir para o Dashboard
+              </a>
+            )}
+          </div>
+        </div>
       </div>
 
-      <a href="/dashboard" className="btn btn-primary mt-6">
-        Ir para o Dashboard
+      <a href="/dashboard" className="caption mt-4 inline-block underline">
+        Pular e ir direto para o Dashboard
       </a>
     </div>
   );

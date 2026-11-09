@@ -42,6 +42,7 @@ model UsuarioInterno {
   atualizadoEm  DateTime     @updatedAt
 
   empresasCriadas Empresa[] @relation("EmpresaCriadaPor")
+  impersonacoes   ImpersonacaoLog[]
 }
 
 // ---------------------------------------------------------------------------
@@ -74,21 +75,36 @@ model Empresa {
   lancamentosCaixa  LancamentoCaixa[]
   planoNegocio      PlanoNegocio?
   aceiteTermos      AceiteTermos?
+  impersonacoes     ImpersonacaoLog[]
 }
 
-// Login de acesso do lado do cliente (1 por empresa no MVP; múltiplos a partir da fase 2)
+// Papel de um Usuario (login do lado do cliente) dentro da própria empresa.
+// DONO é quem assinou/criou a conta (1 por empresa, criado pelo Administrativo);
+// MEMBRO é convidado pelo DONO (fase 2 — múltiplos usuários por empresa).
+enum PapelUsuario {
+  DONO
+  MEMBRO
+}
+
+// Login de acesso do lado do cliente — múltiplos usuários por empresa (fase 2)
 model Usuario {
-  id            String      @id @default(cuid())
-  empresa       Empresa     @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  id            String       @id @default(cuid())
+  empresa       Empresa      @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   empresaId     String
   nome          String
-  email         String      @unique
+  email         String       @unique
   senhaHash     String?
-  googleId      String?     @unique
-  conviteToken  String?     @unique
+  papel         PapelUsuario @default(DONO)
+  googleId      String?      @unique
+  conviteToken  String?      @unique
   conviteExpira DateTime?
-  criadoEm      DateTime    @default(now())
-  atualizadoEm  DateTime    @updatedAt
+  // Acesso removido pelo DONO (membro continua existindo, mas não consegue mais logar).
+  // Não existe um enum de "status" aqui de propósito: ativo/pendente já é derivável de
+  // (senhaHash || googleId) sem precisar de um campo cujo valor inicial, para os
+  // Usuarios já existentes antes desta coluna, seria um chute.
+  removidoEm    DateTime?
+  criadoEm      DateTime     @default(now())
+  atualizadoEm  DateTime     @updatedAt
 
   @@index([empresaId])
 }
@@ -344,4 +360,28 @@ model PlanoNegocio {
   empresaId String   @unique
   conteudo  Json?
   atualizadoEm DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Auditoria de "Representar" (impersonação): alguém da equipe Duo Fraguima
+// acessando o painel do lado do cliente para dar suporte. A sessão de suporte
+// em si não usa nenhuma tabela — ela é só um JWT com userType "cliente" mais
+// os metadados de quem está representando (ver src/auth.ts) — este modelo é
+// só o registro permanente de quando isso aconteceu, para fins de auditoria.
+// encerradoEm é "best-effort": fechado quando a pessoa clica em "Encerrar
+// atendimento" OU na primeira requisição depois da expiração automática
+// (30 min); se a sessão simplesmente for abandonada sem nenhuma requisição
+// nova, o registro pode ficar em aberto além desse prazo — iniciadoEm + 30min
+// é o limite superior real de quanto tempo o modo suporte ficou ativo.
+model ImpersonacaoLog {
+  id               String    @id @default(cuid())
+  usuarioInterno   UsuarioInterno @relation(fields: [usuarioInternoId], references: [id])
+  usuarioInternoId String
+  empresa          Empresa   @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  empresaId        String
+  iniciadoEm       DateTime  @default(now())
+  encerradoEm      DateTime?
+
+  @@index([empresaId])
+  @@index([usuarioInternoId])
 }

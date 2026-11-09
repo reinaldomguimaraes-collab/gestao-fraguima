@@ -42,3 +42,24 @@ export async function enviarConvite(params: {
   });
   return { enviado: true };
 }
+
+/** E-mail de redefinição de senha — mesma mecânica de token do convite, texto diferente. */
+export async function enviarResetSenha(params: { paraNome: string; paraEmail: string; linkRedefinir: string }) {
+  const assunto = "Redefinição de senha — Duo Fraguima";
+  const corpo = `Olá, ${params.paraNome}!\n\nRecebemos um pedido para redefinir a senha da sua conta no Duo Fraguima Gestão Empresarial.\nClique no link abaixo para escolher uma nova senha (válido por 1 hora):\n\n${params.linkRedefinir}\n\nSe você não pediu essa redefinição, pode ignorar este e-mail com segurança — sua senha atual continua valendo.`;
+
+  if (!transporter) {
+    console.log(
+      `[reset de senha simulado — configure SMTP_* no .env para enviar de verdade]\nPara: ${params.paraEmail}\nAssunto: ${assunto}\nLink: ${params.linkRedefinir}`
+    );
+    return { enviado: false, motivo: "SMTP não configurado — veja o log do servidor" };
+  }
+
+  await transporter.sendMail({
+    from,
+    to: params.paraEmail,
+    subject: assunto,
+    text: corpo
+  });
+  return { enviado: true };
+}

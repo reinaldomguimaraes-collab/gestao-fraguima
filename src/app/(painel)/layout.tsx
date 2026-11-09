@@ -3,9 +3,10 @@ import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { requireCliente } from "@/lib/session";
 import { SidebarCliente } from "@/components/SidebarCliente";
+import { BannerModoSuporte } from "@/components/BannerModoSuporte";
 
 export default async function PainelLayout({ children }: { children: React.ReactNode }) {
-  const { empresaId, nome, email } = await requireCliente();
+  const { empresaId, nome, email, impersonadoPor, impersonaExpiraEm } = await requireCliente();
   const pathname = headers().get("x-pathname") || "/dashboard";
 
   const empresa = await prisma.empresa.findUnique({
@@ -23,7 +24,12 @@ export default async function PainelLayout({ children }: { children: React.React
   return (
     <div className="flex min-h-screen bg-surface-100">
       <SidebarCliente empresaNome={empresa.nome} usuarioNome={nome} />
-      <main className="flex-1 p-8">{children}</main>
+      <div className="flex flex-1 flex-col">
+        {impersonadoPor && impersonaExpiraEm && (
+          <BannerModoSuporte empresaNome={empresa.nome} internoNome={impersonadoPor.nome} expiraEm={impersonaExpiraEm} />
+        )}
+        <main className="flex-1 p-8">{children}</main>
+      </div>
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Logo } from "@/components/Logo";
 import { loginGoogleAction } from "./actions";
 import { GoogleIcon } from "@/components/GoogleIcon";
@@ -34,6 +35,12 @@ export default function LoginPage({ searchParams }: { searchParams: { erro?: str
         )}
 
         <LoginForm />
+
+        <p className="caption mt-3 text-right">
+          <Link href="/esqueci-senha" className="underline">
+            Esqueci minha senha
+          </Link>
+        </p>
 
         <div className="my-4 flex items-center gap-3">
           <div className="h-px flex-1 bg-border" />

@@ -10,7 +10,20 @@ import { auth } from "@/auth";
  * lado do cliente nem precisam saber o empresaId — ele é implícito.
  */
 
-export type SessaoCliente = { empresaId: string; nome: string; email: string };
+export type SessaoCliente = {
+  id: string;
+  empresaId: string;
+  nome: string;
+  email: string;
+  // DONO x MEMBRO (fase 2 — múltiplos usuários por empresa). Numa sessão de
+  // "modo suporte" (impersonadoPor preenchido) não existe um Usuario real por
+  // trás — aqui ela vem como "DONO" por padrão, só para liberar as telas.
+  papel: "DONO" | "MEMBRO";
+  // Preenchido só durante "Representar" (ver src/auth.ts): quem da equipe
+  // Duo Fraguima está vendo o painel do cliente, e até quando.
+  impersonadoPor: { id: string; nome: string } | null;
+  impersonaExpiraEm: number | null;
+};
 export type SessaoInterno = {
   id: string;
   nome: string;
@@ -21,7 +34,21 @@ export async function requireCliente(): Promise<SessaoCliente> {
   const session = await auth();
   const user = session?.user as any;
   if (!session || user?.userType !== "cliente") redirect("/login");
-  return { empresaId: user.empresaId as string, nome: user.name as string, email: user.email as string };
+  return {
+    id: user.id as string,
+    empresaId: user.empresaId as string,
+    nome: user.name as string,
+    email: user.email as string,
+    papel: (user.papelCliente as "DONO" | "MEMBRO") ?? "DONO",
+    impersonadoPor: user.impersonadoPor ?? null,
+    impersonaExpiraEm: user.impersonaExpiraEm ?? null
+  };
+}
+
+export async function requireDono(): Promise<SessaoCliente> {
+  const cliente = await requireCliente();
+  if (cliente.papel !== "DONO") redirect("/configuracoes");
+  return cliente;
 }
 
 export async function requireInterno(): Promise<SessaoInterno> {

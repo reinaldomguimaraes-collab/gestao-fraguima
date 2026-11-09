@@ -9,6 +9,11 @@ export function expiraEm7Dias() {
   return new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 }
 
+/** Validade mais curta para link de redefinição de senha (diferente do convite). */
+export function expiraEm1Hora() {
+  return new Date(Date.now() + 60 * 60 * 1000);
+}
+
 /** Código curto exibido no Administrativo (ex.: CLI-0001), nunca usado para controle de acesso. */
 export function proximoCodigoEmpresa(ultimoNumero: number) {
   const n = ultimoNumero + 1;

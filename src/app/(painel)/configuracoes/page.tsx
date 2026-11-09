@@ -1,6 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import { requireCliente } from "@/lib/session";
-import { salvarPerfilAction } from "./actions";
+import { salvarPerfilAction, toggleRemovidoMembroAction, reenviarConviteMembroAction } from "./actions";
+import { StatusChip } from "@/components/StatusChip";
+import { AlterarSenhaForm } from "./AlterarSenhaForm";
+import { ConvidarMembroForm } from "./ConvidarMembroForm";
 
 const SECOES = [
   { titulo: "Dashboard", texto: "Resumo da saúde financeira do mês: meta batida, saldo de caixa e resultado do período." },
@@ -14,9 +17,19 @@ const SECOES = [
   { titulo: "Plano de Negócio", texto: "Em breve — documento guiado com missão, diferenciais e análise de mercado simples." }
 ];
 
+function statusMembro(u: { removidoEm: Date | null; senhaHash: string | null; googleId: string | null }) {
+  if (u.removidoEm) return "REMOVIDO";
+  if (!u.senhaHash && !u.googleId) return "PENDENTE";
+  return "ATIVO";
+}
+
 export default async function ConfiguracoesPage() {
-  const { empresaId, nome } = await requireCliente();
+  const { id, empresaId, nome, papel, impersonadoPor } = await requireCliente();
   const empresa = await prisma.empresa.findUniqueOrThrow({ where: { id: empresaId } });
+  const membros = await prisma.usuario.findMany({ where: { empresaId }, orderBy: { criadoEm: "asc" } });
+  // Em modo suporte não existe um Usuario de verdade por trás da sessão — sem
+  // senha de ninguém específico para trocar.
+  const usuarioAtual = impersonadoPor ? null : await prisma.usuario.findUnique({ where: { id } });
 
   return (
     <div className="max-w-2xl">
@@ -42,18 +55,52 @@ export default async function ConfiguracoesPage() {
           </button>
         </form>
 
-        <div className="card">
-          <div className="mb-3 text-sm font-semibold text-ink">Usuários</div>
-          <div className="flex items-center justify-between border-b border-border py-2">
-            <div>
-              <div className="text-sm font-semibold text-ink">{nome}</div>
-              <div className="caption">Dono · acesso completo</div>
+        <div className="card flex flex-col gap-3">
+          <div className="text-sm font-semibold text-ink">Usuários</div>
+          {membros.map((m) => (
+            <div key={m.id} className="flex items-center justify-between border-b border-border py-2 last:border-0">
+              <div>
+                <div className="text-sm font-semibold text-ink">{m.nome}</div>
+                <div className="caption">{m.papel === "DONO" ? "Dono · acesso completo" : "Membro"}</div>
+              </div>
+              <div className="flex items-center gap-3">
+                <StatusChip status={statusMembro(m)} />
+                {papel === "DONO" && m.papel !== "DONO" && (
+                  <>
+                    {statusMembro(m) === "PENDENTE" && (
+                      <form action={reenviarConviteMembroAction}>
+                        <input type="hidden" name="id" value={m.id} />
+                        <button className="text-sm font-medium text-accent underline">Reenviar</button>
+                      </form>
+                    )}
+                    <form action={toggleRemovidoMembroAction}>
+                      <input type="hidden" name="id" value={m.id} />
+                      <button
+                        className={`text-sm font-medium underline ${
+                          m.removidoEm ? "text-positive" : "text-negative"
+                        }`}
+                      >
+                        {m.removidoEm ? "Reativar" : "Remover"}
+                      </button>
+                    </form>
+                  </>
+                )}
+              </div>
             </div>
-            <span className="chip chip-open">Ativo</span>
-          </div>
-          <p className="caption mt-3">Convidar outros usuários (ex.: contador) estará disponível a partir da fase 2.</p>
+          ))}
+          {papel === "DONO" ? (
+            <ConvidarMembroForm />
+          ) : (
+            <p className="caption border-t border-border pt-3">Só o Dono pode convidar ou remover usuários.</p>
+          )}
         </div>
       </div>
+
+      {usuarioAtual && (
+        <div className="mb-8 max-w-md">
+          <AlterarSenhaForm temSenha={!!usuarioAtual.senhaHash} />
+        </div>
+      )}
 
       <div className="mb-3 text-sm font-semibold text-ink">Como funciona o Duo Fraguima Gestão Empresarial</div>
       <div className="mb-6 flex flex-col gap-2">

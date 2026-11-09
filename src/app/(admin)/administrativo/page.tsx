@@ -2,7 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireInterno } from "@/lib/session";
 import { StatusChip } from "@/components/StatusChip";
-import { toggleBloqueioAction, reenviarConviteClienteAction } from "./actions";
+import { toggleBloqueioAction, reenviarConviteClienteAction, representarAction } from "./actions";
 
 export default async function AdministrativoPage() {
   await requireInterno();
@@ -22,7 +22,8 @@ export default async function AdministrativoPage() {
       </div>
       <p className="caption mb-6">
         Cadastro feito pela equipe Duo Fraguima — o cliente recebe o acesso por e-mail e pode convidar outros
-        usuários da empresa dele a partir da fase 2.
+        usuários da empresa dele em Configurações. Use "Representar" para ver o painel como a empresa vê, e dar
+        suporte.
       </p>
 
       <div className="overflow-hidden rounded-xl border border-border bg-white">
@@ -54,6 +55,12 @@ export default async function AdministrativoPage() {
                       <button className="text-sm font-medium text-accent underline">Reenviar convite</button>
                     </form>
                   )}
+                  {e.status !== "BLOQUEADO" && (
+                    <form action={representarAction} className="ml-3 inline">
+                      <input type="hidden" name="empresaId" value={e.id} />
+                      <button className="text-sm font-medium text-accent underline">Representar</button>
+                    </form>
+                  )}
                   <form action={toggleBloqueioAction} className="ml-3 inline">
                     <input type="hidden" name="empresaId" value={e.id} />
                     <button
@@ -74,8 +81,8 @@ export default async function AdministrativoPage() {
       <div className="card mt-5 max-w-xl">
         <div className="mb-2 text-sm font-semibold text-ink">Nota de produto</div>
         <p className="caption">
-          Múltiplos usuários por empresa (ex.: dono + contador) ficam disponíveis a partir da fase 2 — no MVP cada
-          empresa opera com 1 usuário.
+          "Representar" abre o painel da empresa em modo suporte, com um aviso fixo no topo — a sessão volta
+          sozinha para o Administrativo em até 30 minutos, ou antes, clicando em "Encerrar atendimento".
         </p>
       </div>
     </div>

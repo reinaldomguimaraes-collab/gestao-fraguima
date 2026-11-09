@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireInterno } from "@/lib/session";
 import { enviarConviteCliente } from "@/lib/invites";
+import { signIn } from "@/auth";
 
 /**
  * Bloquear/desbloquear acesso é uma ação administrativa deliberadamente
@@ -33,4 +34,19 @@ export async function reenviarConviteClienteAction(formData: FormData) {
   const usuario = await prisma.usuario.findFirst({ where: { empresaId } });
   if (usuario) await enviarConviteCliente(usuario.id);
   revalidatePath("/administrativo");
+}
+
+/**
+ * "Representar": qualquer pessoa da equipe Duo Fraguima (Proprietário ou
+ * Colaborador) pode ver o painel de uma empresa como se fosse ela, para dar
+ * suporte. Isto troca a sessão atual por uma sessão "cliente" da empresa
+ * (ver o provider "impersonate" em src/auth.ts, que re-verifica tudo de novo
+ * por conta própria) — o requireInterno() aqui é só defesa em profundidade,
+ * já que o botão nem aparece fora do Administrativo.
+ */
+export async function representarAction(formData: FormData) {
+  await requireInterno();
+  const empresaId = String(formData.get("empresaId") || "");
+  if (!empresaId) return;
+  await signIn("impersonate", { empresaId, redirectTo: "/dashboard" });
 }
